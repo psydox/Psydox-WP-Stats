@@ -26,7 +26,7 @@ It provides website statistics without relying on external analytics providers.
 3. Upload the ZIP file and click Install Now.
 4. Click Activate Plugin.
 
-### Option 2: Install via Psydox W Hub
+### Option 2: Install via Psydox WP Hub
 
 1. Open Psydox W Hub from your WordPress admin area.
 2. Find Psydox WP Stats in the plugin catalog.

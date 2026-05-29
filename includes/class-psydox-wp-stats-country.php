@@ -41,7 +41,11 @@ class Psydox_WP_Stats_Country {
 	private function detect_country_code() {
 		$header_keys = array(
 			'HTTP_CF_IPCOUNTRY',
+			'HTTP_CLOUDFRONT_VIEWER_COUNTRY',
+			'HTTP_X_GEO_COUNTRY',
+			'HTTP_X_COUNTRY',
 			'GEOIP_COUNTRY_CODE',
+			'HTTP_GEOIP_COUNTRY_CODE',
 			'HTTP_X_COUNTRY_CODE',
 			'HTTP_X_APPENGINE_COUNTRY',
 		);
@@ -52,17 +56,103 @@ class Psydox_WP_Stats_Country {
 			}
 
 			$code = strtoupper( sanitize_text_field( wp_unslash( $_SERVER[ $key ] ) ) );
+			$code = $this->normalize_country_code( $code );
 			if ( preg_match( '/^[A-Z]{2}$/', $code ) ) {
 				return $code;
 			}
 		}
 
-		$locale = get_locale();
-		if ( is_string( $locale ) && preg_match( '/^[a-z]{2}[_-]([A-Z]{2})$/', $locale, $matches ) ) {
-			return $matches[1];
+		$ip_code = $this->detect_country_code_from_ip();
+		if ( '' !== $ip_code ) {
+			return $ip_code;
 		}
 
 		return '';
+	}
+
+	/**
+	 * Detect country code from visitor IP using local/provider-backed integrations.
+	 *
+	 * @return string
+	 */
+	private function detect_country_code_from_ip() {
+		$ip = $this->get_visitor_ip();
+		if ( '' === $ip ) {
+			return '';
+		}
+
+		// Allow sites/integrations to provide a country code from IP without editing plugin core.
+		$filtered_code = apply_filters( 'psydox_wp_stats_country_code_from_ip', '', $ip );
+		if ( is_string( $filtered_code ) && '' !== trim( $filtered_code ) ) {
+			$normalized = $this->normalize_country_code( strtoupper( trim( $filtered_code ) ) );
+			if ( preg_match( '/^[A-Z]{2}$/', $normalized ) ) {
+				return $normalized;
+			}
+		}
+
+		// Use PHP GeoIP extension when available (local DB-based, no external HTTP request).
+		if ( function_exists( 'geoip_country_code_by_name' ) ) {
+			$code = geoip_country_code_by_name( $ip );
+			if ( is_string( $code ) && '' !== trim( $code ) ) {
+				$normalized = $this->normalize_country_code( strtoupper( trim( $code ) ) );
+				if ( preg_match( '/^[A-Z]{2}$/', $normalized ) ) {
+					return $normalized;
+				}
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Resolve visitor IP from common proxy headers.
+	 *
+	 * @return string
+	 */
+	private function get_visitor_ip() {
+		$ip_headers = array(
+			'HTTP_CF_CONNECTING_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_X_REAL_IP',
+			'HTTP_CLIENT_IP',
+			'REMOTE_ADDR',
+		);
+
+		foreach ( $ip_headers as $header ) {
+			if ( empty( $_SERVER[ $header ] ) ) {
+				continue;
+			}
+
+			$raw_value = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
+			$parts     = array_map( 'trim', explode( ',', $raw_value ) );
+
+			foreach ( $parts as $candidate ) {
+				if ( '' === $candidate ) {
+					continue;
+				}
+
+				if ( filter_var( $candidate, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+					return $candidate;
+				}
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Normalize non-standard country codes returned by some providers.
+	 *
+	 * @param string $code Country code.
+	 * @return string
+	 */
+	private function normalize_country_code( $code ) {
+		$map = array(
+			'UK' => 'GB',
+			'EL' => 'GR',
+		);
+
+		return isset( $map[ $code ] ) ? $map[ $code ] : $code;
 	}
 
 	/**
