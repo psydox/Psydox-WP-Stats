@@ -3,7 +3,7 @@
  * Plugin Name: Psydox WP Stats
  * Plugin URI: https://psydox.com/
  * Description: Lightweight, privacy-focused, self-hosted analytics for WordPress.
- * Version: 2026.05.30.1742
+ * Version: 2026.05.30.1743
  * Author: Psydox
  * Author URI: https://github.com/Psydox
  * License: GPL-2.0-or-later
@@ -18,11 +18,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PSYDOX_WP_STATS_VERSION', '2026.05.30.1742' );
+define( 'PSYDOX_WP_STATS_VERSION', '2026.05.30.1743' );
 define( 'PSYDOX_WP_STATS_FILE', __FILE__ );
 define( 'PSYDOX_WP_STATS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PSYDOX_WP_STATS_URL', plugin_dir_url( __FILE__ ) );
 define( 'PSYDOX_WP_STATS_OPTION_KEY', 'psydox_wp_stats_settings' );
+
+$psydox_wp_stats_vendor_autoload = PSYDOX_WP_STATS_PATH . 'vendor/autoload.php';
+if ( file_exists( $psydox_wp_stats_vendor_autoload ) ) {
+	require_once $psydox_wp_stats_vendor_autoload;
+}
 
 spl_autoload_register(
 	static function ( $class_name ) {

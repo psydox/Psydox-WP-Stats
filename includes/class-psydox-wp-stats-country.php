@@ -143,6 +143,23 @@ class Psydox_WP_Stats_Country {
 			}
 		}
 
+		// Support MaxMind DB Reader extension/class API available on many Windows PHP builds.
+		if ( class_exists( '\\MaxMind\\Db\\Reader' ) ) {
+			try {
+				$reader = new \MaxMind\Db\Reader( $mmdb_path );
+				$result = $reader->get( $ip );
+
+				if ( is_array( $result ) && isset( $result['country']['iso_code'] ) && is_string( $result['country']['iso_code'] ) ) {
+					$code = $this->normalize_country_code( strtoupper( trim( $result['country']['iso_code'] ) ) );
+					if ( $this->is_valid_country_code( $code ) ) {
+						return $code;
+					}
+				}
+			} catch ( \Exception $exception ) {
+				// Fall through to procedural extension path below.
+			}
+		}
+
 		// Fallback: PECL maxminddb extension.
 		if ( function_exists( 'maxminddb_open' ) && function_exists( 'maxminddb_get' ) && function_exists( 'maxminddb_close' ) ) {
 			$handle = @maxminddb_open( $mmdb_path );
