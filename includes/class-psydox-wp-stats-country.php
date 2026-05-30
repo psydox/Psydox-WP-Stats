@@ -95,9 +95,96 @@ class Psydox_WP_Stats_Country {
 			$code = geoip_country_code_by_name( $ip );
 			if ( is_string( $code ) && '' !== trim( $code ) ) {
 				$normalized = $this->normalize_country_code( strtoupper( trim( $code ) ) );
-				if ( preg_match( '/^[A-Z]{2}$/', $normalized ) ) {
+				if ( $this->is_valid_country_code( $normalized ) ) {
 					return $normalized;
 				}
+			}
+		}
+
+		$mmdb_code = $this->detect_country_code_from_mmdb( $ip );
+		if ( '' !== $mmdb_code ) {
+			return $mmdb_code;
+		}
+
+		return '';
+	}
+
+	/**
+	 * Detect country code from a local MaxMind MMDB database.
+	 *
+	 * Supports:
+	 * - GeoIP2 PHP library (if present in host/vendor autoload)
+	 * - PECL maxminddb extension functions
+	 *
+	 * @param string $ip Public visitor IP.
+	 * @return string
+	 */
+	private function detect_country_code_from_mmdb( $ip ) {
+		$mmdb_path = $this->get_mmdb_path();
+		if ( '' === $mmdb_path || ! file_exists( $mmdb_path ) || ! is_readable( $mmdb_path ) ) {
+			return '';
+		}
+
+		// Preferred: GeoIP2 PHP library.
+		if ( class_exists( '\\GeoIp2\\Database\\Reader' ) ) {
+			try {
+				$reader = new \GeoIp2\Database\Reader( $mmdb_path );
+				$record = $reader->country( $ip );
+				$reader->close();
+
+				if ( isset( $record->country->isoCode ) && is_string( $record->country->isoCode ) ) {
+					$code = $this->normalize_country_code( strtoupper( trim( $record->country->isoCode ) ) );
+					if ( $this->is_valid_country_code( $code ) ) {
+						return $code;
+					}
+				}
+			} catch ( \Exception $exception ) {
+				// Fall through to extension path below.
+			}
+		}
+
+		// Fallback: PECL maxminddb extension.
+		if ( function_exists( 'maxminddb_open' ) && function_exists( 'maxminddb_get' ) && function_exists( 'maxminddb_close' ) ) {
+			$handle = @maxminddb_open( $mmdb_path );
+			if ( $handle ) {
+				$result = @maxminddb_get( $handle, $ip );
+				@maxminddb_close( $handle );
+
+				if ( is_array( $result ) && isset( $result['country']['iso_code'] ) ) {
+					$raw_code = $result['country']['iso_code'];
+					if ( is_string( $raw_code ) ) {
+						$code = $this->normalize_country_code( strtoupper( trim( $raw_code ) ) );
+						if ( $this->is_valid_country_code( $code ) ) {
+							return $code;
+						}
+					}
+				}
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Resolve local MMDB file path.
+	 *
+	 * @return string
+	 */
+	private function get_mmdb_path() {
+		$candidates = array(
+			defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR . '/uploads/GeoLite2-Country.mmdb' : '',
+			defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR . '/GeoLite2-Country.mmdb' : '',
+			defined( 'PSYDOX_WP_STATS_PATH' ) ? PSYDOX_WP_STATS_PATH . 'data/GeoLite2-Country.mmdb' : '',
+		);
+
+		$filtered_path = apply_filters( 'psydox_wp_stats_mmdb_path', '' );
+		if ( is_string( $filtered_path ) && '' !== trim( $filtered_path ) ) {
+			array_unshift( $candidates, trim( $filtered_path ) );
+		}
+
+		foreach ( $candidates as $candidate ) {
+			if ( is_string( $candidate ) && '' !== $candidate && file_exists( $candidate ) ) {
+				return $candidate;
 			}
 		}
 
@@ -153,6 +240,16 @@ class Psydox_WP_Stats_Country {
 		);
 
 		return isset( $map[ $code ] ) ? $map[ $code ] : $code;
+	}
+
+	/**
+	 * Validate ISO alpha-2 country code format.
+	 *
+	 * @param string $code Country code.
+	 * @return bool
+	 */
+	private function is_valid_country_code( $code ) {
+		return is_string( $code ) && (bool) preg_match( '/^[A-Z]{2}$/', $code );
 	}
 
 	/**

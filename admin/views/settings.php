@@ -12,6 +12,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $debug_mode_enabled = \Psydox\WPStats\Psydox_WP_Stats_Admin::is_debug_mode_enabled();
+$geo_download_notice = array(
+	'show'    => isset( $_GET['maintenance_action'] ) && 'download_geo_db' === sanitize_key( wp_unslash( $_GET['maintenance_action'] ) ),
+	'success' => isset( $_GET['geo_status'] ) && 'success' === sanitize_key( wp_unslash( $_GET['geo_status'] ) ),
+	'message' => isset( $_GET['geo_message'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['geo_message'] ) ) ) : '',
+);
 ?>
 <div class="wrap psydox-stats-wrap">
 	<h1><?php esc_html_e( 'Psydox WP Stats Settings', 'psydox-wp-stats' ); ?></h1>
@@ -21,7 +26,7 @@ $debug_mode_enabled = \Psydox\WPStats\Psydox_WP_Stats_Admin::is_debug_mode_enabl
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=psydox-wp-stats&tab=content' ) ); ?>" class="nav-tab"><?php esc_html_e( 'Post/Pages', 'psydox-wp-stats' ); ?></a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=psydox-wp-stats&tab=world' ) ); ?>" class="nav-tab"><?php esc_html_e( 'World', 'psydox-wp-stats' ); ?></a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=psydox-wp-stats&tab=bots' ) ); ?>" class="nav-tab"><?php esc_html_e( 'Bots', 'psydox-wp-stats' ); ?></a>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=psydox-wp-stats&tab=settings' ) ); ?>" class="nav-tab nav-tab-active"><?php esc_html_e( 'Stats Settings', 'psydox-wp-stats' ); ?></a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=psydox-wp-stats&tab=settings' ) ); ?>" class="nav-tab nav-tab-active"><?php esc_html_e( 'Settings', 'psydox-wp-stats' ); ?></a>
 		<a href="<?php echo esc_url( 'https://brianrosario.com/support-me/' ); ?>" class="nav-tab" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Support Me', 'psydox-wp-stats' ); ?></a>
 		<a href="<?php echo esc_url( 'https://github.com/psydox/Psydox-WP-Stats' ); ?>" class="nav-tab" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Help', 'psydox-wp-stats' ); ?></a>
 	</h2>
@@ -191,6 +196,77 @@ $debug_mode_enabled = \Psydox\WPStats\Psydox_WP_Stats_Admin::is_debug_mode_enabl
 				<?php submit_button( __( 'Generate Test Data', 'psydox-wp-stats' ), 'secondary', 'submit', false ); ?>
 			</form>
 		<?php endif; ?>
+	</div>
+
+	<div class="psydox-panel">
+		<h2><?php esc_html_e( 'Geo Database', 'psydox-wp-stats' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'Download and manage local geolocation databases for server-side country detection without third-party API requests.', 'psydox-wp-stats' ); ?></p>
+
+		<?php if ( ! empty( $geo_download_notice['show'] ) ) : ?>
+			<div class="notice <?php echo esc_attr( ! empty( $geo_download_notice['success'] ) ? 'notice-success' : 'notice-error' ); ?> is-dismissible" style="margin: 8px 0 12px;">
+				<p><?php echo esc_html( ! empty( $geo_download_notice['message'] ) ? (string) $geo_download_notice['message'] : __( 'Geo database action completed.', 'psydox-wp-stats' ) ); ?></p>
+			</div>
+		<?php endif; ?>
+
+		<table class="widefat striped" style="margin-bottom:12px; max-width: 920px;">
+			<tbody>
+				<tr>
+					<th><?php esc_html_e( 'Current Database Status', 'psydox-wp-stats' ); ?></th>
+					<td>
+						<?php if ( ! empty( $geo_db_status['found'] ) ) : ?>
+							<strong><?php esc_html_e( 'Installed', 'psydox-wp-stats' ); ?></strong><br />
+							<?php echo esc_html( (string) $geo_db_status['path'] ); ?><br />
+							<?php
+							printf(
+								/* translators: %s is file size in MB. */
+								esc_html__( 'Size: %s MB', 'psydox-wp-stats' ),
+								esc_html( number_format_i18n( ( (int) $geo_db_status['size'] ) / 1048576, 2 ) )
+							);
+							?>
+						<?php else : ?>
+							<strong><?php esc_html_e( 'Not Installed', 'psydox-wp-stats' ); ?></strong>
+						<?php endif; ?>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="psydox-inline-form" style="margin-bottom: 12px;" enctype="multipart/form-data">
+			<?php wp_nonce_field( 'psydox_wp_stats_maintenance_action', 'psydox_wp_stats_maintenance_nonce' ); ?>
+			<input type="hidden" name="action" value="psydox_wp_stats_maintenance" />
+			<input type="hidden" name="maintenance_action" value="download_geo_db" />
+
+			<p class="psydox-field-inline">
+				<label class="psydox-field-label" for="psydox-geo-db-source"><?php esc_html_e( 'Database Source', 'psydox-wp-stats' ); ?></label>
+				<select id="psydox-geo-db-source" name="geo_db_source">
+					<option value="dbip_lite"><?php esc_html_e( 'DB-IP Country Lite (Auto Download)', 'psydox-wp-stats' ); ?></option>
+					<option value="maxmind_manual"><?php esc_html_e( 'MaxMind GeoLite2 (Manual Download)', 'psydox-wp-stats' ); ?></option>
+				</select>
+			</p>
+			<p class="psydox-field-inline" style="margin-top:8px;">
+				<label class="psydox-field-label" for="psydox-geo-mmdb-file"><?php esc_html_e( 'MaxMind MMDB File', 'psydox-wp-stats' ); ?></label>
+				<input id="psydox-geo-mmdb-file" type="file" name="geo_mmdb_file" accept=".mmdb" />
+				<span class="description" style="display:block; margin-top:4px;"><?php esc_html_e( 'For MaxMind GeoLite2, choose the GeoLite2-Country .mmdb file, then click Download / Install.', 'psydox-wp-stats' ); ?></span>
+			</p>
+			<?php submit_button( __( 'Download / Install', 'psydox-wp-stats' ), 'secondary', 'submit', false ); ?>
+		</form>
+
+		<p class="description">
+			<?php esc_html_e( 'Selecting DB-IP Country Lite downloads the latest monthly MMDB file automatically into your WordPress uploads directory.', 'psydox-wp-stats' ); ?>
+		</p>
+		<p class="description">
+			<?php esc_html_e( 'If using MaxMind manual mode, the uploaded file will be stored as wp-content/uploads/GeoLite2-Country.mmdb.', 'psydox-wp-stats' ); ?>
+		</p>
+
+		<div class="psydox-geo-attribution" style="margin: 8px 0 0; padding: 10px 12px; border: 1px solid #dcdcde; border-left: 4px solid #72aee6; background: #f6f7f7;">
+			<p><strong><?php esc_html_e( 'Attribution and Licensing', 'psydox-wp-stats' ); ?></strong></p>
+			<p><?php esc_html_e( 'DB-IP Lite is licensed under CC BY 4.0 and requires attribution when geolocation results are used in your web application.', 'psydox-wp-stats' ); ?></p>
+			<p>
+				<a href="https://db-ip.com" target="_blank" rel="noopener noreferrer">https://db-ip.com</a>
+				<?php esc_html_e( ' - Suggested attribution: IP Geolocation by DB-IP', 'psydox-wp-stats' ); ?>
+			</p>
+			<p><?php esc_html_e( 'MaxMind GeoLite2 has separate license terms and may require account-based/manual download depending on your compliance requirements.', 'psydox-wp-stats' ); ?></p>
+		</div>
 	</div>
 
 	<div class="psydox-panel">

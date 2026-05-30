@@ -154,7 +154,7 @@ $render_country_sort_link = static function ( $label, $column ) use ( $country_t
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=psydox-wp-stats&tab=content' ) ); ?>" class="nav-tab <?php echo esc_attr( 'content' === $active_tab ? 'nav-tab-active' : '' ); ?>"><?php esc_html_e( 'Post/Pages', 'psydox-wp-stats' ); ?></a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=psydox-wp-stats&tab=world' ) ); ?>" class="nav-tab <?php echo esc_attr( 'world' === $active_tab ? 'nav-tab-active' : '' ); ?>"><?php esc_html_e( 'World', 'psydox-wp-stats' ); ?></a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=psydox-wp-stats&tab=bots' ) ); ?>" class="nav-tab <?php echo esc_attr( 'bots' === $active_tab ? 'nav-tab-active' : '' ); ?>"><?php esc_html_e( 'Bots', 'psydox-wp-stats' ); ?></a>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=psydox-wp-stats&tab=settings' ) ); ?>" class="nav-tab <?php echo esc_attr( 'settings' === $active_tab ? 'nav-tab-active' : '' ); ?>"><?php esc_html_e( 'Stats Settings', 'psydox-wp-stats' ); ?></a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=psydox-wp-stats&tab=settings' ) ); ?>" class="nav-tab <?php echo esc_attr( 'settings' === $active_tab ? 'nav-tab-active' : '' ); ?>"><?php esc_html_e( 'Settings', 'psydox-wp-stats' ); ?></a>
 		<a href="<?php echo esc_url( 'https://brianrosario.com/support-me/' ); ?>" class="nav-tab" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Support Me', 'psydox-wp-stats' ); ?></a>
 		<a href="<?php echo esc_url( 'https://github.com/psydox/Psydox-WP-Stats' ); ?>" class="nav-tab" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Help', 'psydox-wp-stats' ); ?></a>
 	</h2>

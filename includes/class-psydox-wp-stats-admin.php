@@ -505,6 +505,15 @@ class Psydox_WP_Stats_Admin {
 				$args['inserted']           = max( 0, (int) $inserted_rows );
 				self::invalidate_dashboard_cache();
 				break;
+			case 'download_geo_db':
+				$source = isset( $_POST['geo_db_source'] ) ? sanitize_key( wp_unslash( $_POST['geo_db_source'] ) ) : 'dbip_lite';
+				$result = $this->download_geo_database( $source );
+
+				$args['maintenance_action'] = 'download_geo_db';
+				$args['geo_source']         = $source;
+				$args['geo_status']         = ! empty( $result['success'] ) ? 'success' : 'error';
+				$args['geo_message']        = isset( $result['message'] ) ? rawurlencode( (string) $result['message'] ) : '';
+				break;
 		}
 
 		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
@@ -561,7 +570,245 @@ class Psydox_WP_Stats_Admin {
 		}
 
 		$settings = Psydox_WP_Stats::get_settings();
+		$geo_db_status = $this->get_geo_db_status();
 		require PSYDOX_WP_STATS_PATH . 'admin/views/settings.php';
+	}
+
+	/**
+	 * Download geo database file for server-side country lookup.
+	 *
+	 * @param string $source Database source identifier.
+	 * @return array<string,mixed>
+	 */
+	private function download_geo_database( $source ) {
+		if ( 'maxmind_manual' === $source ) {
+			return $this->upload_geo_database_file();
+		}
+
+		if ( 'dbip_lite' !== $source ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Unknown geo database source selected.', 'psydox-wp-stats' ),
+			);
+		}
+
+		$year_month = gmdate( 'Y-m' );
+		$download_url = 'https://download.db-ip.com/free/dbip-country-lite-' . $year_month . '.mmdb.gz';
+		$upload_dir = wp_upload_dir();
+
+		if ( empty( $upload_dir['basedir'] ) || ! is_dir( $upload_dir['basedir'] ) ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Uploads directory is not available.', 'psydox-wp-stats' ),
+			);
+		}
+
+		$tmp_file = wp_tempnam( 'psydox_geo_db.mmdb.gz' );
+		if ( ! $tmp_file ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Could not allocate temporary file for download.', 'psydox-wp-stats' ),
+			);
+		}
+
+		$response = wp_remote_get(
+			$download_url,
+			array(
+				'timeout' => 90,
+				'stream'  => true,
+				'filename' => $tmp_file,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			@unlink( $tmp_file );
+			return array(
+				'success' => false,
+				'message' => sprintf(
+					/* translators: %s is error message from HTTP request. */
+					__( 'Geo database download failed: %s', 'psydox-wp-stats' ),
+					$response->get_error_message()
+				),
+			);
+		}
+
+		$status_code = (int) wp_remote_retrieve_response_code( $response );
+		if ( $status_code < 200 || $status_code >= 300 ) {
+			@unlink( $tmp_file );
+			return array(
+				'success' => false,
+				'message' => sprintf(
+					/* translators: %d is HTTP status code. */
+					__( 'Geo database server returned HTTP %d.', 'psydox-wp-stats' ),
+					$status_code
+				),
+			);
+		}
+
+		$destination = trailingslashit( $upload_dir['basedir'] ) . 'GeoLite2-Country.mmdb';
+		$gunzip_result = $this->gunzip_file( $tmp_file, $destination );
+		@unlink( $tmp_file );
+
+		if ( ! $gunzip_result ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Downloaded file could not be decompressed.', 'psydox-wp-stats' ),
+			);
+		}
+
+		return array(
+			'success' => true,
+			'message' => sprintf(
+				/* translators: %s is destination path. */
+				__( 'Geo database installed at %s', 'psydox-wp-stats' ),
+				$destination
+			),
+		);
+	}
+
+	/**
+	 * Upload a manually provided GeoLite2 country MMDB file.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function upload_geo_database_file() {
+		if ( empty( $_FILES['geo_mmdb_file'] ) || ! is_array( $_FILES['geo_mmdb_file'] ) ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Please choose a .mmdb file to upload.', 'psydox-wp-stats' ),
+			);
+		}
+
+		$file = $_FILES['geo_mmdb_file'];
+		if ( ! empty( $file['error'] ) ) {
+			return array(
+				'success' => false,
+				'message' => sprintf(
+					/* translators: %d is PHP upload error code. */
+					__( 'Upload failed with error code %d.', 'psydox-wp-stats' ),
+					(int) $file['error']
+				),
+			);
+		}
+
+		$filename = isset( $file['name'] ) ? sanitize_file_name( wp_unslash( $file['name'] ) ) : '';
+		if ( 'mmdb' !== strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) ) ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Invalid file type. Please upload a .mmdb file.', 'psydox-wp-stats' ),
+			);
+		}
+
+		$tmp_name = isset( $file['tmp_name'] ) ? (string) $file['tmp_name'] : '';
+		if ( '' === $tmp_name || ! is_uploaded_file( $tmp_name ) ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Temporary upload file was not found.', 'psydox-wp-stats' ),
+			);
+		}
+
+		$upload_dir = wp_upload_dir();
+		if ( empty( $upload_dir['basedir'] ) || ! is_dir( $upload_dir['basedir'] ) ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Uploads directory is not available.', 'psydox-wp-stats' ),
+			);
+		}
+
+		$destination = trailingslashit( $upload_dir['basedir'] ) . 'GeoLite2-Country.mmdb';
+		if ( ! @move_uploaded_file( $tmp_name, $destination ) ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Could not move uploaded file to uploads directory.', 'psydox-wp-stats' ),
+			);
+		}
+
+		@chmod( $destination, 0644 );
+
+		return array(
+			'success' => true,
+			'message' => sprintf(
+				/* translators: %s is destination path. */
+				__( 'GeoLite2 database uploaded to %s', 'psydox-wp-stats' ),
+				$destination
+			),
+		);
+	}
+
+	/**
+	 * Decompress a GZip file to a destination path.
+	 *
+	 * @param string $source_gz Source .gz path.
+	 * @param string $destination Destination file path.
+	 * @return bool
+	 */
+	private function gunzip_file( $source_gz, $destination ) {
+		$in = @gzopen( $source_gz, 'rb' );
+		if ( false === $in ) {
+			return false;
+		}
+
+		$out = @fopen( $destination, 'wb' );
+		if ( false === $out ) {
+			@gzclose( $in );
+			return false;
+		}
+
+		$ok = true;
+		while ( ! gzeof( $in ) ) {
+			$chunk = gzread( $in, 8192 );
+			if ( false === $chunk ) {
+				$ok = false;
+				break;
+			}
+			if ( false === fwrite( $out, $chunk ) ) {
+				$ok = false;
+				break;
+			}
+		}
+
+		@gzclose( $in );
+		@fclose( $out );
+
+		if ( ! $ok ) {
+			@unlink( $destination );
+		}
+
+		return $ok;
+	}
+
+	/**
+	 * Get current geo database status for settings UI.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function get_geo_db_status() {
+		$candidates = array(
+			defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR . '/uploads/GeoLite2-Country.mmdb' : '',
+			defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR . '/GeoLite2-Country.mmdb' : '',
+			defined( 'PSYDOX_WP_STATS_PATH' ) ? PSYDOX_WP_STATS_PATH . 'data/GeoLite2-Country.mmdb' : '',
+		);
+
+		$filtered_path = apply_filters( 'psydox_wp_stats_mmdb_path', '' );
+		if ( is_string( $filtered_path ) && '' !== trim( $filtered_path ) ) {
+			array_unshift( $candidates, trim( $filtered_path ) );
+		}
+
+		foreach ( $candidates as $candidate ) {
+			if ( is_string( $candidate ) && '' !== $candidate && file_exists( $candidate ) ) {
+				return array(
+					'found' => true,
+					'path'  => $candidate,
+					'size'  => (int) @filesize( $candidate ),
+				);
+			}
+		}
+
+		return array(
+			'found' => false,
+			'path'  => '',
+			'size'  => 0,
+		);
 	}
 
 	/**

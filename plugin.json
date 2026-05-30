@@ -1,12 +1,12 @@
 {
   "name": "Psydox WP Stats",
   "slug": "psydox-wp-stats",
-  "version": "2026.05.30.0543",
+  "version": "2026.05.30.1724",
   "author": "Psydox",
   "description": "A privacy-focused WordPress analytics plugin providing visitor statistics, crawler insights, device analytics, and real-time monitoring without external services.",
   "requires_wp": "6.5",
   "requires_php": "8.2",
   "repository": "https://github.com/psydox/Psydox-WP-Stats",
-  "download_url": "https://github.com/psydox/Psydox-WP-Stats/releases/download/v2026.05.30.0543/Psydox-WP-Stats.zip",
-  "changelog_url": "https://github.com/psydox/Psydox-WP-Stats/releases/tag/v2026.05.30.0543"
+  "download_url": "https://github.com/psydox/Psydox-WP-Stats/releases/download/v2026.05.30.1724/Psydox-WP-Stats.zip",
+  "changelog_url": "https://github.com/psydox/Psydox-WP-Stats/releases/tag/v2026.05.30.1724"
 }
