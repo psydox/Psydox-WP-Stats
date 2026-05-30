@@ -17,7 +17,8 @@
 			return;
 		}
 		if (!rows || !rows.length) {
-			$target.html('<tr><td colspan="6">No data</td></tr>');
+			var emptyCols = type === 'crawler' ? 4 : 7;
+			$target.html('<tr><td colspan="' + emptyCols + '">No data</td></tr>');
 			return;
 		}
 
@@ -26,6 +27,7 @@
 			if (type === 'crawler') {
 				html += '<tr>' +
 					'<td>' + escHtml(row.crawler_name || 'Bot') + '</td>' +
+					'<td>' + escHtml(row.ip_hash || '-') + '</td>' +
 					'<td>' + escHtml(row.page_url || '') + '</td>' +
 					'<td>' + escHtml(row.last_activity_at || '') + '</td>' +
 					'</tr>';
@@ -33,6 +35,7 @@
 			}
 			html += '<tr>' +
 				'<td>' + escHtml(row.visitor_type || '') + '</td>' +
+				'<td>' + escHtml(row.ip_hash || '-') + '</td>' +
 				'<td>' + escHtml(row.page_url || '') + '</td>' +
 				'<td>' + escHtml(row.browser || '') + '</td>' +
 				'<td>' + escHtml(row.device_type || '') + '</td>' +

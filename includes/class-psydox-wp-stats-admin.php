@@ -1123,7 +1123,7 @@ class Psydox_WP_Stats_Admin {
 
 		$recent_crawler_visits = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT crawler_name, page_url, user_agent, created_at
+				"SELECT crawler_name, page_url, user_agent, ip_hash, created_at
 			FROM {$table_name}
 			WHERE visitor_type = 'bot'
 			ORDER BY created_at DESC
@@ -1138,7 +1138,7 @@ class Psydox_WP_Stats_Admin {
 
 		$recent_visits = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT visitor_type, page_url, browser, device_type, operating_system, referrer, last_activity_at
+				"SELECT visitor_type, page_url, browser, device_type, operating_system, referrer, ip_hash, last_activity_at
 			FROM {$table_name}
 			ORDER BY last_activity_at DESC
 			LIMIT %d OFFSET %d",

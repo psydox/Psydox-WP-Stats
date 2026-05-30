@@ -165,7 +165,7 @@ class Psydox_WP_Stats_Tracker {
 	 * @return string|null
 	 */
 	private function get_ip_hash( array $settings ) {
-		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		$ip = $this->get_visitor_ip();
 		if ( empty( $ip ) ) {
 			return null;
 		}
@@ -176,6 +176,42 @@ class Psydox_WP_Stats_Tracker {
 
 		$site_salt = wp_salt( 'auth' );
 		return hash_hmac( 'sha256', $ip, $site_salt );
+	}
+
+	/**
+	 * Resolve visitor IP from common proxy/CDN headers.
+	 *
+	 * @return string
+	 */
+	private function get_visitor_ip() {
+		$ip_headers = array(
+			'HTTP_CF_CONNECTING_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_X_REAL_IP',
+			'HTTP_CLIENT_IP',
+			'REMOTE_ADDR',
+		);
+
+		foreach ( $ip_headers as $header ) {
+			if ( empty( $_SERVER[ $header ] ) ) {
+				continue;
+			}
+
+			$raw_value = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
+			$parts     = array_map( 'trim', explode( ',', $raw_value ) );
+
+			foreach ( $parts as $candidate ) {
+				if ( '' === $candidate ) {
+					continue;
+				}
+
+				if ( filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
+					return $candidate;
+				}
+			}
+		}
+
+		return '';
 	}
 
 	/**

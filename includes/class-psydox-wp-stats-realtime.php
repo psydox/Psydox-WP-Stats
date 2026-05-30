@@ -66,7 +66,7 @@ class Psydox_WP_Stats_Realtime {
 
 		$recent_visits = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT visitor_type, page_url, browser, operating_system, device_type, referrer, crawler_name, last_activity_at
+				"SELECT visitor_type, page_url, browser, operating_system, device_type, referrer, crawler_name, ip_hash, last_activity_at
 				FROM {$table_name}
 				WHERE last_activity_at >= %s
 				ORDER BY last_activity_at DESC

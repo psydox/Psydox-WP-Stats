@@ -406,11 +406,12 @@ $render_country_sort_link = static function ( $label, $column ) use ( $country_t
 		<div class="psydox-panel">
 			<h2><?php esc_html_e( 'Recent Crawler Visits', 'psydox-wp-stats' ); ?></h2>
 			<table class="widefat striped">
-				<thead><tr><th><?php esc_html_e( 'Crawler', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Page', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Time', 'psydox-wp-stats' ); ?></th></tr></thead>
+				<thead><tr><th><?php esc_html_e( 'Crawler', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'IP', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Page', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Time', 'psydox-wp-stats' ); ?></th></tr></thead>
 				<tbody id="psydox-recent-crawlers-body">
 				<?php foreach ( $data['recent_crawler_visits'] as $row ) : ?>
 					<tr>
 						<td><?php echo esc_html( $row['crawler_name'] ); ?></td>
+						<td><?php echo esc_html( ! empty( $row['ip_hash'] ) ? (string) $row['ip_hash'] : '-' ); ?></td>
 						<td><?php echo esc_html( $row['page_url'] ); ?></td>
 						<td><?php echo esc_html( $row['created_at'] ); ?></td>
 					</tr>
@@ -427,11 +428,12 @@ $render_country_sort_link = static function ( $label, $column ) use ( $country_t
 		<div class="psydox-panel">
 			<h2><?php esc_html_e( 'Real-Time Visitors', 'psydox-wp-stats' ); ?></h2>
 			<table class="widefat striped">
-				<thead><tr><th><?php esc_html_e( 'Visitor Type', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Page', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Browser', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Device', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Referrer', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Last Activity', 'psydox-wp-stats' ); ?></th></tr></thead>
+				<thead><tr><th><?php esc_html_e( 'Visitor Type', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'IP', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Page', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Browser', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Device', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Referrer', 'psydox-wp-stats' ); ?></th><th><?php esc_html_e( 'Last Activity', 'psydox-wp-stats' ); ?></th></tr></thead>
 				<tbody id="psydox-recent-visits-body">
 				<?php foreach ( $data['recent_visits'] as $row ) : ?>
 					<tr>
 						<td><?php echo esc_html( ucfirst( (string) $row['visitor_type'] ) ); ?></td>
+						<td><?php echo esc_html( ! empty( $row['ip_hash'] ) ? (string) $row['ip_hash'] : '-' ); ?></td>
 						<td><?php echo esc_html( $row['page_url'] ); ?></td>
 						<td><?php echo esc_html( $row['browser'] ); ?></td>
 						<td><?php echo esc_html( $row['device_type'] ); ?></td>
