@@ -29,12 +29,16 @@
 			.replace(/&/g, ' and ')
 			.replace(/[^a-z0-9\s]/g, ' ')
 			.replace(/\s+/g, ' ')
+			.replace(/^the\s+/, '')
 			.trim();
 	}
 
 	function getCountryAliases() {
 		return {
 			'united states': 'united states of america',
+			'united states of america': 'united states',
+			'usa': 'united states of america',
+			'us': 'united states of america',
 			'russia': 'russian federation',
 			'vietnam': 'viet nam',
 			'south korea': 'korea republic of',
@@ -49,6 +53,8 @@
 			'brunei': 'brunei darussalam',
 			'ivory coast': 'cote d ivoire',
 			'czech republic': 'czechia',
+			'the bahamas': 'bahamas',
+			'bahamas': 'the bahamas',
 			'palestine': 'palestine state of'
 		};
 	}
@@ -93,11 +99,11 @@
 		};
 		var getCountryFill = function (value) {
 			if (!value || value <= 0) {
-				return '#ffffff';
+				return '#fff7ed';
 			}
 
 			var ratio = maxVisits > 0 ? value / maxVisits : 0;
-			return mixColor('#cfe8ff', '#0b5cab', ratio);
+			return mixColor('#ffedd5', '#c2410c', ratio);
 		};
 
 		(dots || []).forEach(function (dot) {

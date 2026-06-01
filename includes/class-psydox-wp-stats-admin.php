@@ -188,7 +188,7 @@ class Psydox_WP_Stats_Admin {
 		$rows = $wpdb->get_results(
 			"SELECT country_code, country_name, COUNT(*) AS visits
 			FROM {$table_name}
-			WHERE country_code IS NOT NULL AND country_code <> '' AND country_code <> 'UN'
+			WHERE country_name IS NOT NULL AND country_name <> '' AND country_name <> 'Unknown'
 			GROUP BY country_code, country_name
 			ORDER BY visits DESC
 			LIMIT 100",
@@ -197,18 +197,20 @@ class Psydox_WP_Stats_Admin {
 
 		$dots = array();
 		foreach ( $rows as $row ) {
-			$code = isset( $row['country_code'] ) ? strtoupper( sanitize_text_field( (string) $row['country_code'] ) ) : '';
-			$coords = $this->get_country_centroid( $code );
-			if ( empty( $coords ) ) {
-				continue;
+			$code = isset( $row['country_code'] ) ? strtoupper( trim( sanitize_text_field( (string) $row['country_code'] ) ) ) : '';
+			if ( 'UN' === $code ) {
+				$code = '';
 			}
+
+			$coords = $this->get_country_centroid( $code );
+			$name = isset( $row['country_name'] ) ? sanitize_text_field( (string) $row['country_name'] ) : $code;
 
 			$dots[] = array(
 				'country_code' => $code,
-				'country_name' => isset( $row['country_name'] ) ? sanitize_text_field( (string) $row['country_name'] ) : $code,
+				'country_name' => $name,
 				'visits'       => isset( $row['visits'] ) ? (int) $row['visits'] : 0,
-				'lat'          => $coords['lat'],
-				'lng'          => $coords['lng'],
+				'lat'          => isset( $coords['lat'] ) ? (float) $coords['lat'] : null,
+				'lng'          => isset( $coords['lng'] ) ? (float) $coords['lng'] : null,
 			);
 		}
 

@@ -226,17 +226,75 @@ class Psydox_WP_Stats_Database {
 		$devices  = array( 'desktop', 'mobile', 'tablet' );
 		$crawlers = array( 'Googlebot', 'Bingbot', 'DuckDuckBot', 'YandexBot', 'AhrefsBot' );
 		$countries = array(
-			array( 'code' => 'US', 'name' => 'United States' ),
-			array( 'code' => 'GB', 'name' => 'United Kingdom' ),
-			array( 'code' => 'CA', 'name' => 'Canada' ),
-			array( 'code' => 'DE', 'name' => 'Germany' ),
-			array( 'code' => 'FR', 'name' => 'France' ),
-			array( 'code' => 'IN', 'name' => 'India' ),
-			array( 'code' => 'AU', 'name' => 'Australia' ),
-			array( 'code' => 'BR', 'name' => 'Brazil' ),
-			array( 'code' => 'JP', 'name' => 'Japan' ),
-			array( 'code' => 'PH', 'name' => 'Philippines' ),
+			array(
+				'code'    => 'US',
+				'name'    => 'United States of America',
+				'weight'  => 34,
+				'aliases' => array( 'United States', 'USA' ),
+			),
+			array(
+				'code'    => 'GB',
+				'name'    => 'United Kingdom',
+				'weight'  => 12,
+				'aliases' => array(),
+			),
+			array(
+				'code'    => 'CA',
+				'name'    => 'Canada',
+				'weight'  => 10,
+				'aliases' => array(),
+			),
+			array(
+				'code'    => 'DE',
+				'name'    => 'Germany',
+				'weight'  => 9,
+				'aliases' => array(),
+			),
+			array(
+				'code'    => 'FR',
+				'name'    => 'France',
+				'weight'  => 7,
+				'aliases' => array(),
+			),
+			array(
+				'code'    => 'IN',
+				'name'    => 'India',
+				'weight'  => 9,
+				'aliases' => array(),
+			),
+			array(
+				'code'    => 'AU',
+				'name'    => 'Australia',
+				'weight'  => 6,
+				'aliases' => array(),
+			),
+			array(
+				'code'    => 'BR',
+				'name'    => 'Brazil',
+				'weight'  => 5,
+				'aliases' => array(),
+			),
+			array(
+				'code'    => 'JP',
+				'name'    => 'Japan',
+				'weight'  => 4,
+				'aliases' => array(),
+			),
+			array(
+				'code'    => 'PH',
+				'name'    => 'Philippines',
+				'weight'  => 4,
+				'aliases' => array(),
+			),
 		);
+
+		$country_pool = array();
+		foreach ( $countries as $country_index => $country_row ) {
+			$weight = isset( $country_row['weight'] ) ? max( 1, (int) $country_row['weight'] ) : 1;
+			for ( $weight_index = 0; $weight_index < $weight; $weight_index++ ) {
+				$country_pool[] = $country_index;
+			}
+		}
 
 		$inserted = 0;
 
@@ -252,7 +310,20 @@ class Psydox_WP_Stats_Database {
 			$device_type       = $is_bot ? 'bot' : $devices[ array_rand( $devices ) ];
 			$device_brand      = 'Unknown';
 			$device_model      = 'Unknown';
-			$country           = $countries[ array_rand( $countries ) ];
+			$country_index     = $country_pool[ array_rand( $country_pool ) ];
+			$country           = $countries[ $country_index ];
+			$country_code      = isset( $country['code'] ) ? (string) $country['code'] : 'UN';
+			$country_name      = isset( $country['name'] ) ? (string) $country['name'] : 'Unknown';
+
+			// Keep most rows canonical but add a small alias sample to exercise map name normalization.
+			if ( ! empty( $country['aliases'] ) && is_array( $country['aliases'] ) && wp_rand( 1, 100 ) <= 12 ) {
+				$country_name = (string) $country['aliases'][ array_rand( $country['aliases'] ) ];
+			}
+
+			// Simulate real-world partial geo enrichment: some visits have a country name but no reliable code.
+			if ( wp_rand( 1, 100 ) <= 4 ) {
+				$country_code = '';
+			}
 			$referrer          = $referrers[ array_rand( $referrers ) ];
 			$ip_hash           = hash_hmac( 'sha256', '127.0.0.' . (string) wp_rand( 1, 254 ), wp_salt( 'auth' ) );
 			$session_hash      = hash_hmac( 'sha256', uniqid( 'psydox_', true ) . (string) wp_rand(), wp_salt( 'logged_in' ) );
@@ -270,8 +341,8 @@ class Psydox_WP_Stats_Database {
 					'page_url'         => $page['url'],
 					'page_title'       => $page['title'],
 					'referrer'         => $referrer,
-					'country_code'     => $country['code'],
-					'country_name'     => $country['name'],
+					'country_code'     => $country_code,
+					'country_name'     => $country_name,
 					'browser'          => $browser,
 					'browser_version'  => $browser_version,
 					'operating_system' => $operating_system,
